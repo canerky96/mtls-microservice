@@ -1,0 +1,17 @@
+docker run -it -v "$(pwd):/export" --entrypoint /bin/sh frapsoft/openssl
+openssl genrsa -aes256 -passout pass:"certificate-authority-pass" -out /ca_key.pem 4096
+openssl req -new -passin pass:"certificate-authority-pass" -key /ca_key.pem -x509 -days 365 -out /ca_cert.pem -subj "/CN=ca.kaya.com"
+
+openssl genrsa -aes256 -passout pass:"product-service-pass" -out /product_service_key.pem 4096
+openssl req -passin pass:"product-service-pass" -new -key /product_service_key.pem -out /product_service_cert.pem -subj "/CN=product-service.kaya.com"
+openssl x509 -req -passin pass:"certificate-authority-pass" -days 365 -in /product_service_cert.pem -CA /ca_cert.pem -CAkey /ca_key.pem -set_serial 01 -out /product_service_signed_cert.pem
+openssl rsa -passin pass:"product-service-pass" -in /product_service_key.pem -out /product_service_key.pem
+cat /product_service_key.pem /product_service_signed_cert.pem >> /product_service_merged_keys.pem
+openssl pkcs12 -export -passout pass:"product_service_p12_pass" -in /product_service_merged_keys.pem -out /export/product_service.p12 -name product_service
+
+openssl genrsa -aes256 -passout pass:"basket-service-pass" -out /basket_service_key.pem 4096
+openssl req -passin pass:"basket-service-pass" -new -key /basket_service_key.pem -out /basket_service_cert.pem -subj "/CN=basket-service.kaya.com"
+openssl x509 -req -passin pass:"certificate-authority-pass" -days 365 -in /basket_service_cert.pem -CA /ca_cert.pem -CAkey /ca_key.pem -set_serial 01 -out /basket_service_signed_cert.pem
+openssl rsa -passin pass:"basket-service-pass" -in /basket_service_key.pem -out /basket_service_key.pem
+cat /basket_service_key.pem /basket_service_signed_cert.pem >> /basket_service_merged_keys.pem
+openssl pkcs12 -export -passout pass:"basket_service_p12_pass" -in /basket_service_merged_keys.pem -out /export/basket_service.p12 -name basket_service
